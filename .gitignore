@@ -1,0 +1,55 @@
+
+# Spring Boot
+HELP.md
+
+# Maven
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# H2 Database
+/data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# STS
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Gradle
+build/
+
+# VS Code
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db

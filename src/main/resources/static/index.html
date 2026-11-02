@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>API Monitor</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #111a2e;
+      --panel-2: #15213a;
+      --line: rgba(148, 163, 184, .15);
+      --text: #edf3ff;
+      --muted: #8fa0bd;
+      --blue: #78a9ff;
+      --blue-strong: #3979ed;
+      --green: #39d69a;
+      --red: #ff7185;
+      --amber: #ffc66d;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .22);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 12% 0%, rgba(55, 103, 190, .17), transparent 36%),
+        radial-gradient(ellipse at 90% 8%, rgba(43, 178, 150, .08), transparent 28%),
+        var(--bg);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .app-shell { width: min(1380px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 78px; border-bottom: 1px solid var(--line); gap: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px;
+      color: #fff; font-weight: 800; letter-spacing: -1px;
+      background: linear-gradient(140deg, #5b9cff, #5b70e8);
+      box-shadow: 0 8px 24px rgba(68, 123, 235, .28);
+    }
+    .brand-name { font-weight: 750; letter-spacing: -.3px; }
+    .brand-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .connection {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 11px;
+      color: #a9b8d0; border: 1px solid var(--line); border-radius: 999px; font-size: 12px;
+      background: rgba(17, 26, 46, .72);
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px rgba(57, 214, 154, .6); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 13px;
+      color: var(--text); background: #18243c; transition: .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(120, 169, 255, .48); background: #20304e; }
+    .btn:disabled { opacity: .55; cursor: wait; transform: none; }
+    .btn-primary { background: linear-gradient(135deg, #4389f5, #4d70e7); border-color: transparent; color: white; font-weight: 650; }
+    .btn-primary:hover { background: linear-gradient(135deg, #5798ff, #5d7ef0); }
+    .btn-quiet { background: transparent; }
+    .btn-danger { color: #ff9aa8; background: rgba(255, 113, 133, .07); border-color: rgba(255, 113, 133, .18); }
+    .btn-small { padding: 7px 9px; font-size: 12px; border-radius: 8px; }
+    main { padding: 34px 0 56px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+    h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); letter-spacing: -1.15px; }
+    .subtitle { margin: 8px 0 0; max-width: 650px; line-height: 1.55; color: var(--muted); font-size: 14px; }
+    .updated { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .stat-card, .panel {
+      border: 1px solid var(--line); border-radius: 16px;
+      background: linear-gradient(180deg, rgba(20, 31, 53, .96), rgba(16, 25, 44, .96));
+      box-shadow: var(--shadow);
+    }
+    .stat-card { min-height: 124px; padding: 18px; }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+    .stat-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: var(--blue); background: rgba(120, 169, 255, .11); font-size: 16px; }
+    .stat-value { margin-top: 13px; font-size: 29px; line-height: 1; font-weight: 760; letter-spacing: -1px; }
+    .stat-note { margin-top: 7px; font-size: 11px; color: var(--muted); }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+    .panel { padding: 20px; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+    h2 { margin: 0; font-size: 16px; letter-spacing: -.25px; }
+    .panel-description { margin: 5px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .count-pill { padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; color: #bac9e1; background: rgba(255,255,255,.025); font-size: 11px; }
+    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8192ae; pointer-events: none; }
+    .search { width: 100%; padding: 10px 12px 10px 36px; color: var(--text); outline: none; border: 1px solid var(--line); border-radius: 10px; background: #0e1729; font-size: 12px; }
+    .search:focus, .field:focus { border-color: rgba(120, 169, 255, .65); box-shadow: 0 0 0 3px rgba(70, 130, 240, .12); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    th { padding: 11px 10px; text-align: left; color: #7f91ad; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; border-bottom: 1px solid var(--line); }
+    td { padding: 14px 10px; border-bottom: 1px solid rgba(148,163,184,.1); vertical-align: middle; font-size: 12px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: rgba(120, 169, 255, .035); }
+    .api-name { color: #edf3ff; font-weight: 650; font-size: 13px; }
+    .api-url { display: block; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 5px; color: #7f91ad; font-size: 11px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 6px 9px; border-radius: 999px; font-size: 10px; font-weight: 750; letter-spacing: .15px; }
+    .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-success { color: var(--green); background: rgba(57,214,154,.1); }
+    .status-http { color: var(--amber); background: rgba(255,198,109,.1); }
+    .status-error { color: var(--red); background: rgba(255,113,133,.1); }
+    .status-pending { color: #9aacc8; background: rgba(154,172,200,.1); }
+    .metric { font-variant-numeric: tabular-nums; color: #d9e5f8; }
+    .date-cell { color: #9aabc5; white-space: nowrap; font-size: 11px; }
+    .actions { display: flex; gap: 6px; white-space: nowrap; }
+    .empty-state { padding: 42px 16px; text-align: center; color: var(--muted); }
+    .empty-icon { width: 48px; height: 48px; display: grid; place-items: center; margin: 0 auto 12px; border-radius: 15px; color: var(--blue); background: rgba(120,169,255,.1); font-size: 22px; }
+    .empty-title { color: var(--text); font-weight: 650; font-size: 14px; }
+    .empty-copy { max-width: 330px; margin: 7px auto 0; font-size: 12px; line-height: 1.6; }
+    .side-stack { display: grid; gap: 16px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; margin-bottom: 7px; color: #b5c3d9; font-size: 11px; font-weight: 650; }
+    .field { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--text); background: #0e1729; font-size: 12px; transition: .18s ease; }
+    .field::placeholder { color: #5f708c; }
+    .form-hint { margin: 7px 0 0; color: #71839f; font-size: 10px; line-height: 1.5; }
+    .submit-btn { width: 100%; margin-top: 3px; }
+    .info-card { padding: 16px; border: 1px solid rgba(120,169,255,.16); border-radius: 13px; background: rgba(67,137,245,.065); }
+    .info-title { display: flex; align-items: center; gap: 8px; color: #dce8fb; font-size: 12px; font-weight: 700; }
+    .info-card p { margin: 8px 0 0; color: #91a2bd; font-size: 11px; line-height: 1.6; }
+    .schedule-line { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); color: #a9b8d0; font-size: 11px; }
+    .schedule-line strong { color: var(--green); font-weight: 650; }
+    .toast {
+      position: fixed; right: 24px; bottom: 24px; z-index: 30; max-width: min(420px, calc(100vw - 48px));
+      padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--text);
+      background: #18243c; box-shadow: var(--shadow); font-size: 12px; line-height: 1.5;
+      opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { border-color: rgba(255,113,133,.35); }
+    dialog {
+      width: min(850px, calc(100% - 32px)); max-height: min(82vh, 760px); padding: 0; overflow: hidden;
+      color: var(--text); border: 1px solid rgba(148,163,184,.22); border-radius: 17px; background: #111a2e; box-shadow: 0 28px 90px rgba(0,0,0,.55);
+    }
+    dialog::backdrop { background: rgba(3, 7, 16, .76); backdrop-filter: blur(5px); }
+    .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 20px; border-bottom: 1px solid var(--line); }
+    .dialog-header h2 { font-size: 17px; }
+    .dialog-subtitle { margin-top: 6px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .dialog-body { padding: 8px 20px 20px; overflow: auto; max-height: calc(82vh - 90px); }
+    .history-table { min-width: 590px; }
+    .history-table td { font-size: 11px; }
+    .history-pagination {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 12px;
+    }
+    .history-pagination-actions { display: flex; align-items: center; gap: 8px; }
+    .history-pagination .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; padding: 22px 0 10px; color: #61728e; font-size: 10px; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 1050px) {
+      .workspace { grid-template-columns: minmax(0, 1fr) 300px; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 780px) {
+      .app-shell { width: min(100% - 28px, 680px); }
+      .workspace { grid-template-columns: 1fr; }
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      .updated { white-space: normal; }
+      .topbar { min-height: 68px; }
+      .connection { display: none; }
+    }
+    @media (max-width: 460px) {
+      .stats-grid { gap: 9px; }
+      .stat-card { min-height: 110px; padding: 13px; }
+      .stat-value { font-size: 25px; }
+      .panel { padding: 15px; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .top-actions .btn { padding: 9px 10px; }
+      .footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">AP</div>
+        <div>
+          <div class="brand-name">API Monitor</div>
+          <div class="brand-sub">Мониторинг доступности сервисов</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="connection"><span class="dot"></span><span>Backend подключён</span></div>
+        <button class="btn btn-quiet" id="refreshButton" type="button" title="Обновить данные">↻ <span>Обновить</span></button>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <div>
+          <h1>Мониторинг API</h1>
+          <p class="subtitle">Следите за доступностью внешних сервисов, временем ответа и историей проверок в одном месте.</p>
+        </div>
+        <div class="updated" id="lastUpdated">Загрузка данных…</div>
+      </section>
+
+      <section class="stats-grid" aria-label="Сводная статистика">
+        <article class="stat-card">
+          <div class="stat-top"><span>Активные API</span><span class="stat-icon">◎</span></div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-note">Сейчас под наблюдением</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Работают</span><span class="stat-icon">✓</span></div>
+          <div class="stat-value" id="statSuccess">—</div>
+          <div class="stat-note">Последняя проверка успешна</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Есть проблемы</span><span class="stat-icon">!</span></div>
+          <div class="stat-value" id="statProblems">—</div>
+          <div class="stat-note">Последняя проверка неуспешна</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Всего проверок</span><span class="stat-icon">⌁</span></div>
+          <div class="stat-value" id="statChecks">—</div>
+          <div class="stat-note">Сохранено в истории</div>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Отслеживаемые сервисы</h2>
+              <p class="panel-description">Состояние по последней сохранённой проверке.</p>
+            </div>
+            <span class="count-pill" id="apiCount">0 сервисов</span>
+          </div>
+          <div class="toolbar">
+            <div class="search-wrap"><span>⌕</span><input class="search" id="searchInput" type="search" placeholder="Поиск по названию или URL…" autocomplete="off"></div>
+          </div>
+          <div class="table-wrap" id="tableWrap">
+            <table>
+              <thead>
+                <tr><th>Сервис</th><th>Состояние</th><th>Ответ</th><th>Последняя проверка</th><th>Действия</th></tr>
+              </thead>
+              <tbody id="apiRows"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="emptyState">
+            <div class="empty-icon">⌁</div>
+            <div class="empty-title" id="emptyTitle">Пока нет активных API</div>
+            <p class="empty-copy" id="emptyCopy">Добавьте первый URL справа — после этого сервис появится в списке мониторинга.</p>
+          </div>
+        </div>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Добавить API</h2>
+                <p class="panel-description">Зарегистрируйте новый сервис для мониторинга.</p>
+              </div>
+              <span class="count-pill">POST</span>
+            </div>
+            <form id="createForm">
+              <div class="form-group">
+                <label for="apiName">Название</label>
+                <input class="field" id="apiName" name="name" type="text" placeholder="Например, GitHub API" maxlength="120" required>
+              </div>
+              <div class="form-group">
+                <label for="apiUrl">URL для проверки</label>
+                <input class="field" id="apiUrl" name="url" type="url" placeholder="https://api.github.com" required>
+                <p class="form-hint">Укажите адрес, который отвечает на GET-запрос. Для начала можно использовать публичные API.</p>
+              </div>
+              <button class="btn btn-primary submit-btn" id="createButton" type="submit">＋ Добавить сервис</button>
+            </form>
+          </section>
+
+          <section class="info-card">
+            <div class="info-title"><span>◷</span> Автоматический мониторинг</div>
+            <p>Сервер самостоятельно проверяет активные API. Открытая вкладка браузера для этого не требуется.</p>
+            <div class="schedule-line"><span>Интервал проверок</span><strong>60 секунд</strong></div>
+            <div class="schedule-line"><span>Обновление панели</span><strong>15 секунд</strong></div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="footer">
+        <span>API Monitor · локальная панель мониторинга</span>
+        <span>Данные обновляются автоматически</span>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="historyDialog">
+    <div class="dialog-header">
+      <div>
+        <h2 id="historyTitle">История проверок</h2>
+        <div class="dialog-subtitle" id="historySubtitle"></div>
+      </div>
+      <button class="btn btn-small" id="closeHistory" type="button" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="table-wrap">
+        <table class="history-table">
+          <thead><tr><th>Время</th><th>Результат</th><th>HTTP</th><th>Время ответа</th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+      <div class="empty-state hidden" id="historyEmpty">История проверок пока пуста.</div>
+      <div class="history-pagination" id="historyPagination">
+        <span id="historyPageInfo">Страница 1 из 1 · 0 записей</span>
+        <div class="history-pagination-actions">
+          <button class="btn btn-small" id="historyPrev" type="button" disabled>← Назад</button>
+          <button class="btn btn-small" id="historyNext" type="button" disabled>Вперёд →</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const API_BASE = '/api/monitored-apis';
+      const REFRESH_INTERVAL_MS = 15_000;
+      let dashboardData = [];
+      let isRefreshing = false;
+      let toastTimer;
+      const HISTORY_PAGE_SIZE = 20;
+      let currentHistoryApi = null;
+      let currentHistoryPage = 0;
+      let currentHistoryTotalPages = 1;
+
+      const elements = {
+        rows: document.getElementById('apiRows'),
+        empty: document.getElementById('emptyState'),
+        emptyTitle: document.getElementById('emptyTitle'),
+        emptyCopy: document.getElementById('emptyCopy'),
+        tableWrap: document.getElementById('tableWrap'),
+        apiCount: document.getElementById('apiCount'),
+        lastUpdated: document.getElementById('lastUpdated'),
+        search: document.getElementById('searchInput'),
+        form: document.getElementById('createForm'),
+        createButton: document.getElementById('createButton'),
+        refreshButton: document.getElementById('refreshButton'),
+        toast: document.getElementById('toast'),
+        dialog: document.getElementById('historyDialog'),
+        historyRows: document.getElementById('historyRows'),
+        historyEmpty: document.getElementById('historyEmpty'),
+        historyTitle: document.getElementById('historyTitle'),
+        historySubtitle: document.getElementById('historySubtitle'),
+        historyPagination: document.getElementById('historyPagination'),
+        historyPageInfo: document.getElementById('historyPageInfo'),
+        historyPrev: document.getElementById('historyPrev'),
+        historyNext: document.getElementById('historyNext')
+      };
+
+      async function request(url, options = {}) {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+            ...(options.headers || {})
+          }
+        });
+        const raw = await response.text();
+        let body = raw;
+        if (raw) {
+          try { body = JSON.parse(raw); } catch (_) { /* Ответ может быть обычным текстом. */ }
+        }
+        if (!response.ok) {
+          let message = response.statusText || `HTTP ${response.status}`;
+          if (typeof body === 'string' && body.trim()) message = body;
+          else if (body && typeof body === 'object') message = body.message || body.error || body.detail || message;
+          throw new Error(message);
+        }
+        return body;
+      }
+
+      function showToast(message, isError = false) {
+        elements.toast.textContent = message;
+        elements.toast.classList.toggle('error', isError);
+        elements.toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 3800);
+      }
+
+      function formatDate(value) {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return new Intl.DateTimeFormat('ru-RU', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        }).format(date);
+      }
+
+      function getLatest(history) {
+        if (!Array.isArray(history) || history.length === 0) return null;
+        // Backend sorts history by checkedAt DESC, so the first item is the newest.
+        return history[0];
+      }
+
+      function statusInfo(status) {
+        switch (status) {
+          case 'SUCCESS': return { label: 'Работает', className: 'status-success' };
+          case 'HTTP_ERROR': return { label: 'HTTP-ошибка', className: 'status-http' };
+          case 'TIMEOUT': return { label: 'Таймаут', className: 'status-error' };
+          case 'NETWORK_ERROR': return { label: 'Нет соединения', className: 'status-error' };
+          default: return { label: 'Ожидает проверки', className: 'status-pending' };
+        }
+      }
+
+      function makeStatus(status) {
+        const info = statusInfo(status);
+        const badge = document.createElement('span');
+        badge.className = `status ${info.className}`;
+        badge.textContent = info.label;
+        return badge;
+      }
+
+      function makeCell(text, className = '') {
+        const cell = document.createElement('td');
+        if (className) cell.className = className;
+        cell.textContent = text;
+        return cell;
+      }
+
+      function makeButton(label, className, onClick, title = '') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `btn btn-small ${className || ''}`.trim();
+        button.textContent = label;
+        if (title) button.title = title;
+        button.addEventListener('click', onClick);
+        return button;
+      }
+
+      function renderStats() {
+        const total = dashboardData.length;
+        let success = 0;
+        let problems = 0;
+        let checks = 0;
+        for (const item of dashboardData) {
+          checks += item.historyTotalElements || 0;
+          const latest = getLatest(item.history);
+          if (!latest) continue;
+          if (latest.checkStatus === 'SUCCESS') success++;
+          else problems++;
+        }
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statSuccess').textContent = success;
+        document.getElementById('statProblems').textContent = problems;
+        document.getElementById('statChecks').textContent = checks;
+        elements.apiCount.textContent = `${total} ${pluralize(total, 'сервис', 'сервиса', 'сервисов')}`;
+      }
+
+      function pluralize(number, one, few, many) {
+        const n = Math.abs(number) % 100;
+        const last = n % 10;
+        if (n > 10 && n < 20) return many;
+        if (last > 1 && last < 5) return few;
+        if (last === 1) return one;
+        return many;
+      }
+
+      function renderRows() {
+        elements.rows.replaceChildren();
+        const query = elements.search.value.trim().toLowerCase();
+        const filtered = dashboardData.filter(item =>
+          `${item.name || ''} ${item.url || ''}`.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+          elements.tableWrap.classList.add('hidden');
+          elements.empty.classList.remove('hidden');
+          if (dashboardData.length === 0) {
+            elements.emptyTitle.textContent = 'Пока нет активных API';
+            elements.emptyCopy.textContent = 'Добавьте первый URL справа — после этого сервис появится в списке мониторинга.';
+          } else {
+            elements.emptyTitle.textContent = 'Ничего не найдено';
+            elements.emptyCopy.textContent = 'Попробуйте изменить поисковый запрос.';
+          }
+          return;
+        }
+
+        elements.tableWrap.classList.remove('hidden');
+        elements.empty.classList.add('hidden');
+
+        for (const api of filtered) {
+          const row = document.createElement('tr');
+          const nameCell = document.createElement('td');
+          const name = document.createElement('div');
+          name.className = 'api-name';
+          name.textContent = api.name || 'Без названия';
+          const url = document.createElement('span');
+          url.className = 'api-url';
+          url.textContent = api.url || '';
+          url.title = api.url || '';
+          nameCell.append(name, url);
+          row.append(nameCell);
+
+          const latest = getLatest(api.history);
+          const statusCell = document.createElement('td');
+          statusCell.append(makeStatus(latest?.checkStatus));
+          row.append(statusCell);
+          row.append(makeCell(latest?.responseTimeMs != null ? `${latest.responseTimeMs} мс` : '—', 'metric'));
+          row.append(makeCell(latest ? formatDate(latest.checkedAt) : 'Проверок пока нет', 'date-cell'));
+
+          const actionsCell = document.createElement('td');
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+          const checkButton = makeButton('Проверить', 'btn-primary', () => runCheck(api.id));
+          const historyButton = makeButton('История', '', () => openHistory(api));
+          const deactivateButton = makeButton('Отключить', 'btn-danger', () => deactivateApi(api));
+          actions.append(checkButton, historyButton, deactivateButton);
+          actionsCell.append(actions);
+          row.append(actionsCell);
+          elements.rows.append(row);
+        }
+      }
+
+      async function loadDashboard({ silent = false } = {}) {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        elements.refreshButton.disabled = true;
+        try {
+          const apis = await request(API_BASE);
+          if (!Array.isArray(apis)) throw new Error('Сервер вернул неожиданный формат списка API.');
+          dashboardData = await Promise.all(apis.map(async api => {
+            try {
+              // Загружаем только последнюю проверку для строки таблицы.
+              // Общее число записей берём из метаданных Page.
+              const page = await request(`${API_BASE}/${encodeURIComponent(api.id)}/checks?page=0&size=1`);
+              const history = page && Array.isArray(page.content) ? page.content : [];
+              return {
+                ...api,
+                history,
+                historyTotalElements: Number(page?.totalElements || 0)
+              };
+            } catch (error) {
+              return { ...api, history: [], historyTotalElements: 0, historyError: error.message };
+            }
+          }));
+          renderStats();
+          renderRows();
+          elements.lastUpdated.textContent = `Обновлено: ${new Date().toLocaleTimeString('ru-RU')}`;
+        } catch (error) {
+          if (!silent) showToast(`Не удалось загрузить данные: ${error.message}`, true);
+          elements.lastUpdated.textContent = 'Не удалось обновить данные';
+          console.error('Dashboard refresh failed:', error);
+        } finally {
+          isRefreshing = false;
+          elements.refreshButton.disabled = false;
+        }
+      }
+
+      async function createApi(event) {
+        event.preventDefault();
+        const name = document.getElementById('apiName').value.trim();
+        const url = document.getElementById('apiUrl').value.trim();
+        if (!name || !url) {
+          showToast('Заполните название и URL.', true);
+          return;
+        }
+        if (!/^https?:\/\/.+/.test(url)) {
+          showToast('URL должен начинаться с http:// или https://', true);
+          return;
+        }
+        elements.createButton.disabled = true;
+        elements.createButton.textContent = 'Добавляем…';
+        try {
+          await request(API_BASE, {
+            method: 'POST',
+            body: JSON.stringify({ name, url })
+          });
+          elements.form.reset();
+          showToast('API успешно добавлен. Автоматическая проверка будет выполнена планировщиком.');
+          await loadDashboard({ silent: true });
+        } catch (error) {
+          showToast(`Не удалось добавить API: ${error.message}`, true);
+        } finally {
+          elements.createButton.disabled = false;
+          elements.createButton.textContent = '＋ Добавить сервис';
+        }
+      }
+
+      async function runCheck(apiId) {
+        try {
+          showToast('Выполняется проверка API…');
+          const result = await request(`${API_BASE}/${encodeURIComponent(apiId)}/checks`, { method: 'POST' });
+          const status = result?.checkStatus || 'проверка завершена';
+          showToast(`Проверка завершена: ${status}${result?.responseTimeMs != null ? `, ${result.responseTimeMs} мс` : ''}`);
+          await loadDashboard({ silent: true });
+        } catch (error) {
+          showToast(`Не удалось выполнить проверку: ${error.message}`, true);
+        }
+      }
+
+      async function deactivateApi(api) {
+        const confirmed = window.confirm(`Отключить мониторинг для «${api.name}»? История проверок сохранится.`);
+        if (!confirmed) return;
+        try {
+          await request(`${API_BASE}/${encodeURIComponent(api.id)}`, { method: 'DELETE' });
+          showToast(`Мониторинг «${api.name}» отключён. История сохранена.`);
+          await loadDashboard({ silent: true });
+        } catch (error) {
+          showToast(`Не удалось отключить API: ${error.message}`, true);
+        }
+      }
+
+      async function openHistory(api) {
+        currentHistoryApi = api;
+        currentHistoryPage = 0;
+        elements.historyTitle.textContent = `История: ${api.name}`;
+        elements.historySubtitle.textContent = api.url;
+        elements.dialog.showModal();
+        await loadHistoryPage(0);
+      }
+
+      async function loadHistoryPage(pageNumber) {
+        if (!currentHistoryApi) return;
+        elements.historyRows.replaceChildren();
+        elements.historyEmpty.classList.add('hidden');
+        elements.historyEmpty.textContent = 'История проверок пока пуста.';
+        elements.historyPageInfo.textContent = 'Загрузка истории…';
+        elements.historyPrev.disabled = true;
+        elements.historyNext.disabled = true;
+
+        try {
+          const page = await request(
+            `${API_BASE}/${encodeURIComponent(currentHistoryApi.id)}/checks?page=${pageNumber}&size=${HISTORY_PAGE_SIZE}`
+          );
+          const rows = page && Array.isArray(page.content) ? page.content : [];
+          currentHistoryPage = Number(page.number || 0);
+          currentHistoryTotalPages = Math.max(1, Number(page.totalPages || 0));
+
+          if (rows.length === 0) {
+            elements.historyEmpty.classList.remove('hidden');
+          }
+
+          for (const item of rows) {
+            const row = document.createElement('tr');
+            row.append(makeCell(formatDate(item.checkedAt), 'date-cell'));
+            const statusCell = document.createElement('td');
+            statusCell.append(makeStatus(item.checkStatus));
+            row.append(statusCell);
+            row.append(makeCell(item.httpStatus == null ? '—' : String(item.httpStatus), 'metric'));
+            row.append(makeCell(item.responseTimeMs == null ? '—' : `${item.responseTimeMs} мс`, 'metric'));
+            elements.historyRows.append(row);
+          }
+
+          const total = Number(page.totalElements || 0);
+          elements.historyPageInfo.textContent = `Страница ${currentHistoryPage + 1} из ${currentHistoryTotalPages} · ${total} ${pluralize(total, 'запись', 'записи', 'записей')}`;
+          elements.historyPrev.disabled = currentHistoryPage <= 0;
+          elements.historyNext.disabled = page.last === true || currentHistoryPage + 1 >= currentHistoryTotalPages;
+        } catch (error) {
+          elements.historyPageInfo.textContent = 'Не удалось загрузить страницу';
+          elements.historyEmpty.textContent = `Не удалось загрузить историю: ${error.message}`;
+          elements.historyEmpty.classList.remove('hidden');
+        }
+      }
+
+      elements.form.addEventListener('submit', createApi);
+      elements.refreshButton.addEventListener('click', () => loadDashboard());
+      elements.search.addEventListener('input', renderRows);
+      document.getElementById('closeHistory').addEventListener('click', () => elements.dialog.close());
+      elements.historyPrev.addEventListener('click', () => {
+        if (currentHistoryPage > 0) loadHistoryPage(currentHistoryPage - 1);
+      });
+      elements.historyNext.addEventListener('click', () => {
+        if (currentHistoryPage + 1 < currentHistoryTotalPages) loadHistoryPage(currentHistoryPage + 1);
+      });
+      elements.dialog.addEventListener('click', event => {
+        if (event.target === elements.dialog) elements.dialog.close();
+      });
+
+      loadDashboard();
+      setInterval(() => loadDashboard({ silent: true }), REFRESH_INTERVAL_MS);
+    })();
+  </script>
+</body>
+</html>
