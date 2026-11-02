@@ -72,7 +72,7 @@
 Клонируйте репозиторий и перейдите в его каталог:
 
 ```bash
-git clone https://github.com/24kaaa/api-monitor
+git clone https://github.com/24kaaa/api-monitor.git
 cd api-monitor
 ```
 
